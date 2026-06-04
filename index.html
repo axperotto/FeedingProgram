@@ -325,9 +325,9 @@
       <h2>Vitamine · frutta e verdura</h2>
       <div class="vit-box" style="margin-top:8px;">
         <div class="vit-counter">
-          <button id="vitMinus">−</button>
-          <div><div class="mono" id="vitVal" style="font-size:1.3rem;">0/5</div><div class="muted">Conta porzioni giornaliere, non una % unica di vitamine.</div></div>
-          <button id="vitPlus">+</button>
+          <button id="vitMinus" aria-label="Riduci porzioni vitamine">−</button>
+          <div><div class="mono" id="vitVal" style="font-size:1.3rem;">0/5</div><div class="muted">Conta porzioni giornaliere di frutta e verdura, non un indice totale delle vitamine.</div></div>
+          <button id="vitPlus" aria-label="Aumenta porzioni vitamine">+</button>
         </div>
       </div>
 
@@ -400,6 +400,7 @@
     let state = loadState();
     let dayOffset = 0;
     let selectedFood = null;
+    let idCounter = 0;
 
     const els = {
       peso: id('peso'), altezza: id('altezza'), sesso: id('sesso'), eta: id('eta'), attivita: id('attivita'), obiettivo: id('obiettivo'),
@@ -554,7 +555,6 @@
       const autoVits = daily.entries.filter(e => e.isFV).length;
       const currentTotal = autoVits + daily.vitAdjust;
       daily.vitAdjust = Math.max(-autoVits, daily.vitAdjust + delta);
-      if (currentTotal + delta < 0) daily.vitAdjust = -autoVits;
       persist();
       renderAll();
     }
@@ -574,16 +574,16 @@
       }, {});
       const orderedCats = Object.keys(groups).sort((a,b) => (a === 'I miei alimenti' ? -1 : b === 'I miei alimenti' ? 1 : a.localeCompare(b)));
       els.foodList.innerHTML = orderedCats.length ? orderedCats.map(cat => `<div class="cat-title">${cat}</div>${groups[cat].map(foodRow).join('')}`).join('') : '<div class="muted" style="padding:8px;">Nessun alimento trovato</div>';
-      els.foodList.querySelectorAll('.food-row[data-id]').forEach(row => row.addEventListener('click', () => selectFood(row.dataset.id)));
+      els.foodList.querySelectorAll('.food-row[data-id]').forEach(row => row.addEventListener('click', () => selectFood(decodeURIComponent(row.dataset.id))));
       els.foodList.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        deleteCustom(btn.dataset.del);
+        deleteCustom(decodeURIComponent(btn.dataset.del));
       }));
     }
 
     function foodRow(food) {
       const kcal = kcal100(food);
-      return `<div class="food-row" data-id="${food.id}"><div><strong>${food.name}${food.mine ? '<span class="tag-mio">mio</span>' : ''}</strong><br><small>P ${food.p} · C ${food.c} · G ${food.f} · ${Math.round(kcal)} kcal /100g ${food.isFV ? '· FV' : ''}</small></div>${food.mine ? `<button class="danger-btn" data-del="${food.id}" style="padding:5px 9px;">×</button>` : ''}</div>`;
+      return `<div class="food-row" data-id="${encodeURIComponent(food.id)}"><div><strong>${escHtml(food.name)}${food.mine ? '<span class="tag-mio">mio</span>' : ''}</strong><br><small>P ${food.p} · C ${food.c} · G ${food.f} · ${Math.round(kcal)} kcal /100g ${food.isFV ? '· FV' : ''}</small></div>${food.mine ? `<button class="danger-btn" data-del="${encodeURIComponent(food.id)}" style="padding:5px 9px;">×</button>` : ''}</div>`;
     }
 
     function selectFood(id) {
@@ -598,7 +598,7 @@
       if (grams <= 0) return alert('Inserisci i grammi.');
       const factor = grams / 100;
       const entry = {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        id: newId(),
         foodId: selectedFood.id,
         name: selectedFood.name,
         grams,
@@ -619,8 +619,8 @@
         els.diaryList.innerHTML = '<div class="muted">Ancora nessun alimento aggiunto per questa data.</div>';
         return;
       }
-      els.diaryList.innerHTML = entries.map(e => `<div class="diary-item"><div class="row between"><strong>${e.name}</strong><button class="danger-btn" data-rm="${e.id}" style="padding:6px 10px;">Elimina</button></div><div class="muted" style="margin-top:5px;">${e.grams} g · P ${e.p} · C ${e.c} · G ${e.f} · ${Math.round(e.kcal)} kcal ${e.isFV ? '· porzione FV' : ''}</div></div>`).join('');
-      els.diaryList.querySelectorAll('[data-rm]').forEach(btn => btn.addEventListener('click', () => removeEntry(btn.dataset.rm)));
+      els.diaryList.innerHTML = entries.map(e => `<div class="diary-item"><div class="row between"><strong>${escHtml(e.name)}</strong><button class="danger-btn" data-rm="${encodeURIComponent(e.id)}" style="padding:6px 10px;">Elimina</button></div><div class="muted" style="margin-top:5px;">${e.grams} g · P ${e.p} · C ${e.c} · G ${e.f} · ${Math.round(e.kcal)} kcal ${e.isFV ? '· porzione FV' : ''}</div></div>`).join('');
+      els.diaryList.querySelectorAll('[data-rm]').forEach(btn => btn.addEventListener('click', () => removeEntry(decodeURIComponent(btn.dataset.rm))));
     }
 
     function removeEntry(id) {
@@ -633,8 +633,8 @@
     function createCustomFood() {
       const name = (els.cName.value || '').trim();
       const p = n(els.cP.value, 0), c = n(els.cC.value, 0), f = n(els.cF.value, 0);
-      if (!name) return alert('Inserisci il nome del alimento personalizzato.');
-      const newFood = { id: `m${Date.now()}`, name, p, c, f, isFV: !!els.cFV.checked };
+      if (!name) return alert("Inserisci il nome dell'alimento personalizzato.");
+      const newFood = { id: `m_${newId()}`, name, p, c, f, isFV: !!els.cFV.checked };
       state.customFoods.unshift(newFood);
       [els.cName, els.cP, els.cC, els.cF].forEach(x => x.value = '');
       els.cFV.checked = false;
@@ -695,6 +695,8 @@
     function round1(v) { return Math.round(v * 10) / 10; }
     function id(x) { return document.getElementById(x); }
     function safeCsv(v) { const s = String(v ?? '').replaceAll('"', '""'); return `"${s}"`; }
+    function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+    function newId() { return (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}_${++idCounter}`; }
 
     function downloadFile(name, content, type) {
       const blob = new Blob([content], { type });
@@ -711,15 +713,16 @@
     function loadState() {
       try {
         const raw = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-        if (!raw) return structuredClone(defaults);
+        if (!raw) return cloneDefaults();
         return {
           profile: { ...defaults.profile, ...(raw.profile || {}) },
           daily: raw.daily && typeof raw.daily === 'object' ? raw.daily : {},
           customFoods: Array.isArray(raw.customFoods) ? raw.customFoods : []
         };
-      } catch { return structuredClone(defaults); }
+      } catch { return cloneDefaults(); }
     }
 
+    function cloneDefaults() { return globalThis.structuredClone ? structuredClone(defaults) : JSON.parse(JSON.stringify(defaults)); }
     function persist() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
   </script>
 </body>
