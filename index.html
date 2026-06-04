@@ -1001,13 +1001,6 @@
       return ENTRY_CATEGORIES.some(c => c.value === value) ? value : '';
     }
 
-    function removeEntryImmediate(id) {
-      const daily = ensureDaily();
-      daily.entries = daily.entries.filter(e => e.id !== id);
-      persist();
-      renderAll();
-    }
-
     function createCustomFood() {
       const name = (els.cName.value || '').trim();
       const p = n(els.cP.value, 0), c = n(els.cC.value, 0), f = n(els.cF.value, 0);
