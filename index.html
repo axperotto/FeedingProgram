@@ -530,7 +530,8 @@
       grams: id('grams'), addFood: id('addFood'), diaryList: id('diaryList'), diaryCount: id('diaryCount'),
       openMeals: id('openMeals'), mealsScreen: id('mealsScreen'), closeMeals: id('closeMeals'), mealsList: id('mealsList'), newMealBtn: id('newMealBtn'), mealBuilder: id('mealBuilder'), mealName: id('mealName'), addMealFood: id('addMealFood'), mealItems: id('mealItems'), mealTotals: id('mealTotals'), saveMeal: id('saveMeal'),
       toggleCustom: id('toggleCustom'), customForm: id('customForm'), cName: id('cName'), cP: id('cP'), cC: id('cC'), cF: id('cF'), cFV: id('cFV'), saveCustom: id('saveCustom'),
-      exportCsv: id('exportCsv'), exportJson: id('exportJson'), copyAll: id('copyAll'), importBtn: id('importBtn'), importInput: id('importInput')
+      exportCsv: id('exportCsv'), exportJson: id('exportJson'), copyAll: id('copyAll'), importBtn: id('importBtn'), importInput: id('importInput'),
+      toast: id('toast')
     };
 
     init();
@@ -665,7 +666,7 @@
       els.kcalRing.style.setProperty('--accent', daily.mode === 'ON' ? 'var(--on)' : 'var(--off)');
       els.kcalRing.classList.remove('goal-met');
       if (kcalPct >= 100) {
-        void els.kcalRing.offsetWidth;
+        void els.kcalRing.offsetWidth; /* force reflow so CSS animation restarts on repeated goal */
         els.kcalRing.classList.add('goal-met');
         els.kcalPct.textContent = '✓';
       } else {
@@ -957,11 +958,10 @@
     function newId() { return (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}_${++idCounter}`; }
     let _toastTimer;
     function showToast(msg) {
-      const el = document.getElementById('toast');
-      el.textContent = msg;
-      el.classList.add('show');
+      els.toast.textContent = msg;
+      els.toast.classList.add('show');
       clearTimeout(_toastTimer);
-      _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+      _toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2200);
     }
 
     function downloadFile(name, content, type) {
