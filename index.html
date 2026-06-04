@@ -98,6 +98,7 @@
       --accent: var(--on);
       width: 148px;
       height: 148px;
+      position: relative;
       border-radius: 50%;
       background: conic-gradient(var(--accent) calc(min(var(--pct),1)*1turn), #1e2536 0turn);
       display: grid;
@@ -234,6 +235,36 @@
       border-radius: 999px;
     }
     .settings button { margin-bottom: 8px; width: 100%; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .header-actions .toggle { flex: 1 1 auto; min-width: 0; }
+    .meal-row {
+      border: 1px solid #24324a;
+      border-radius: 11px;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #101726;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .meal-list, .meal-items {
+      margin-top: 8px;
+      border: 1px solid #263149;
+      border-radius: 12px;
+      background: #0d121c;
+      padding: 8px;
+      max-height: 44vh;
+      overflow: auto;
+    }
+    .meal-item {
+      border: 1px solid #24324a;
+      border-radius: 10px;
+      padding: 8px;
+      margin-bottom: 7px;
+      background: #101726;
+    }
     @media (min-width: 860px) {
       .app { grid-template-columns: 1fr 1fr; }
       .span-2 { grid-column: 1 / -1; }
@@ -246,9 +277,12 @@
     <div class="card span-2">
       <div class="row between">
         <h1>Tracker crescita massa</h1>
-        <div class="toggle" id="modeToggle">
-          <button data-mode="ON" class="on">ON · Allenamento</button>
-          <button data-mode="OFF" class="off">OFF · Riposo</button>
+        <div class="header-actions">
+          <div class="toggle" id="modeToggle">
+            <button data-mode="ON" class="on">ON · Allenamento</button>
+            <button data-mode="OFF" class="off">OFF · Riposo</button>
+          </div>
+          <button class="icon-btn" id="openSettings" aria-label="Apri impostazioni">⚙</button>
         </div>
       </div>
       <div class="row between" style="margin-top:10px;">
@@ -264,7 +298,53 @@
     </div>
 
     <div class="card">
-      <h2>Profilo e obiettivi automatici</h2>
+      <div class="ring-wrap">
+        <div class="ring" id="kcalRing"><div class="ring-center"><strong id="kcalPct">0%</strong><span>Calorie</span></div></div>
+        <div>
+          <h2>Calorie giornata</h2>
+          <div class="mono" id="kcalMain">0 / 0 kcal</div>
+          <div class="muted" id="kcalLeft">Mancano 0 kcal</div>
+        </div>
+      </div>
+      <div id="macroWrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Vitamine · frutta e verdura</h2>
+      <div class="vit-box" style="margin-top:8px;">
+        <div class="vit-counter">
+          <button id="vitMinus" aria-label="Riduci porzioni vitamine">−</button>
+          <div><div class="mono" id="vitVal" style="font-size:1.3rem;">0/5</div><div class="muted">Conta porzioni giornaliere di frutta e verdura, non un indice totale delle vitamine.</div></div>
+          <button id="vitPlus" aria-label="Aumenta porzioni vitamine">+</button>
+        </div>
+      </div>
+
+      <h2 style="margin-top:14px;">Aggiungi cibo</h2>
+      <div class="food-selected" id="selectedFood">Nessun alimento selezionato</div>
+      <button class="soft-btn" id="openSelector" style="width:100%; margin-bottom:8px;">Scegli alimento</button>
+      <button class="soft-btn" id="openMeals" style="width:100%; margin-bottom:8px;" aria-label="Apri i miei pasti ricorrenti">🍽 I miei pasti ricorrenti</button>
+      <div class="grid-2">
+        <div>
+          <label>Grammi</label>
+          <input id="grams" type="number" min="1" step="1" value="100" />
+        </div>
+        <div style="display:flex;align-items:end;"><button class="accent-btn" id="addFood" style="width:100%;">+ Aggiungi</button></div>
+      </div>
+    </div>
+
+    <div class="card span-2">
+      <div class="row between"><h2>Diario del giorno</h2><span class="pill" id="diaryCount">0 pasti</span></div>
+      <div id="diaryList" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div class="fullscreen" id="settingsScreen">
+    <div class="card settings" style="margin:0; box-shadow:none; overflow:auto;">
+      <div class="row between">
+        <h2>Impostazioni</h2>
+        <button class="icon-btn" id="closeSettings" aria-label="Chiudi impostazioni">‹</button>
+      </div>
+      <h2 style="margin-top:10px;">Profilo e obiettivi automatici</h2>
       <div class="grid-2" style="margin-top:8px;">
         <div>
           <label>Peso (kg)</label>
@@ -307,49 +387,7 @@
         <div><label>Calorie ON</label><div id="goalOn" class="mono"></div></div>
         <div><label>Calorie OFF</label><div id="goalOff" class="mono"></div></div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="ring-wrap">
-        <div class="ring" id="kcalRing"><div class="ring-center"><strong id="kcalPct">0%</strong><span>Calorie</span></div></div>
-        <div>
-          <h2>Calorie giornata</h2>
-          <div class="mono" id="kcalMain">0 / 0 kcal</div>
-          <div class="muted" id="kcalLeft">Mancano 0 kcal</div>
-        </div>
-      </div>
-      <div id="macroWrap"></div>
-    </div>
-
-    <div class="card">
-      <h2>Vitamine · frutta e verdura</h2>
-      <div class="vit-box" style="margin-top:8px;">
-        <div class="vit-counter">
-          <button id="vitMinus" aria-label="Riduci porzioni vitamine">−</button>
-          <div><div class="mono" id="vitVal" style="font-size:1.3rem;">0/5</div><div class="muted">Conta porzioni giornaliere di frutta e verdura, non un indice totale delle vitamine.</div></div>
-          <button id="vitPlus" aria-label="Aumenta porzioni vitamine">+</button>
-        </div>
-      </div>
-
-      <h2 style="margin-top:14px;">Aggiungi cibo</h2>
-      <div class="food-selected" id="selectedFood">Nessun alimento selezionato</div>
-      <button class="soft-btn" id="openSelector" style="width:100%; margin-bottom:8px;">Scegli alimento</button>
-      <div class="grid-2">
-        <div>
-          <label>Grammi</label>
-          <input id="grams" type="number" min="1" step="1" value="100" />
-        </div>
-        <div style="display:flex;align-items:end;"><button class="accent-btn" id="addFood" style="width:100%;">+ Aggiungi</button></div>
-      </div>
-    </div>
-
-    <div class="card span-2">
-      <div class="row between"><h2>Diario del giorno</h2><span class="pill" id="diaryCount">0 pasti</span></div>
-      <div id="diaryList" style="margin-top:8px;"></div>
-    </div>
-
-    <div class="card span-2 settings">
-      <h2>Backup e impostazioni</h2>
+      <h2 style="margin-top:14px;">Backup e impostazioni</h2>
       <button class="soft-btn" id="exportCsv">Esporta CSV</button>
       <button class="soft-btn" id="exportJson">Esporta backup .json</button>
       <button class="soft-btn" id="copyAll">Copia tutto negli appunti</button>
@@ -363,6 +401,10 @@
       <div class="row between">
         <h2>Seleziona alimento</h2>
         <button class="icon-btn" id="closeSelector">✕</button>
+      </div>
+      <div id="selectorMealOptions" style="display:none; margin-top:8px;">
+        <label>Grammi da aggiungere al pasto</label>
+        <input id="selectorMealGrams" type="number" min="1" step="1" value="100" />
       </div>
       <input id="searchFood" placeholder="Cerca alimento..." style="margin-top:8px;" />
       <button class="soft-btn" id="toggleCustom" style="margin-top:8px;">Crea un alimento personalizzato</button>
@@ -380,9 +422,30 @@
     <div class="food-list" id="foodList"></div>
   </div>
 
+  <div class="fullscreen" id="mealsScreen">
+    <div class="card" style="margin:0; box-shadow:none; overflow:auto;">
+      <div class="row between">
+        <h2>I miei pasti ricorrenti</h2>
+        <button class="icon-btn" id="closeMeals" aria-label="Chiudi pasti ricorrenti">✕</button>
+      </div>
+      <button class="soft-btn" id="newMealBtn" style="width:100%; margin-top:8px;">＋ Crea un nuovo pasto</button>
+      <div id="mealBuilder" style="display:none; margin-top:8px; background:#0d121c; border:1px solid #263149; border-radius:12px; padding:8px;">
+        <label>Nome del pasto</label>
+        <input id="mealName" placeholder="Es. Colazione tipo" />
+        <button class="soft-btn" id="addMealFood" style="width:100%; margin-top:8px;">Scegli alimento dal selettore</button>
+        <div class="meal-items" id="mealItems"></div>
+        <div class="row between" style="margin-top:8px;">
+          <div class="mono" id="mealTotals">P 0 · C 0 · G 0 · 0 kcal</div>
+          <button class="accent-btn" id="saveMeal" style="padding:9px 12px;">Salva pasto</button>
+        </div>
+      </div>
+      <div class="meal-list" id="mealsList"></div>
+    </div>
+  </div>
+
   <script>
     const LS_KEY = 'feedingProgram.v1';
-    const defaults = { profile: { peso: 75, altezza: 175, sesso: 'uomo', eta: 30, attivita: 1.6, obiettivo: 'massa' }, daily: {}, customFoods: [] };
+    const defaults = { profile: { peso: 75, altezza: 175, sesso: 'uomo', eta: 30, attivita: 1.6, obiettivo: 'massa' }, daily: {}, customFoods: [], meals: [] };
 
     const FOODS = [
       ['Petto di pollo','Proteine',31,0,3.6],['Fesa di tacchino','Proteine',29,0,1.2],['Manzo magro','Proteine',26,0,10],['Macinato magro bovino','Proteine',21,0,9],['Uova intere','Proteine',13,1.1,11],['Albume','Proteine',11,0.7,0.2],['Tonno al naturale','Proteine',25,0,1],['Salmone','Proteine',20,0,13],['Merluzzo','Proteine',18,0,0.7],['Orata','Proteine',20,0,6],['Branzino','Proteine',19,0,3],['Gamberi','Proteine',24,0.2,0.3],['Polpo','Proteine',15,3,1],['Bresaola','Proteine',33,0,2],['Prosciutto cotto alta qualità','Proteine',20,1,8],['Prosciutto crudo sgrassato','Proteine',26,0,13],['Speck','Proteine',29,0.5,20],['Whey isolate','Proteine',84,5,3],['Whey concentrate','Proteine',75,8,6],['Tofu','Proteine',13,2,8],['Tempeh','Proteine',19,9,11],['Seitan','Proteine',25,6,1.5],['Lupini','Proteine',16,10,2.4],['Carne di cavallo','Proteine',22,0,4],['Coniglio','Proteine',21,0,5],
@@ -400,16 +463,20 @@
     let state = loadState();
     let dayOffset = 0;
     let selectedFood = null;
+    let selectorTarget = 'diary';
+    let mealDraft = { name: '', items: [] };
     let idCounter = 0;
 
     const els = {
       peso: id('peso'), altezza: id('altezza'), sesso: id('sesso'), eta: id('eta'), attivita: id('attivita'), obiettivo: id('obiettivo'),
       bmr: id('bmr'), maint: id('maint'), goalOn: id('goalOn'), goalOff: id('goalOff'),
       modeToggle: id('modeToggle'), dayLabel: id('dayLabel'), isoLabel: id('isoLabel'), prevDay: id('prevDay'), nextDay: id('nextDay'),
+      openSettings: id('openSettings'), settingsScreen: id('settingsScreen'), closeSettings: id('closeSettings'),
       kcalRing: id('kcalRing'), kcalPct: id('kcalPct'), kcalMain: id('kcalMain'), kcalLeft: id('kcalLeft'), macroWrap: id('macroWrap'),
       vitMinus: id('vitMinus'), vitPlus: id('vitPlus'), vitVal: id('vitVal'),
-      selectedFood: id('selectedFood'), openSelector: id('openSelector'), closeSelector: id('closeSelector'), selectorScreen: id('selectorScreen'), searchFood: id('searchFood'), foodList: id('foodList'),
+      selectedFood: id('selectedFood'), openSelector: id('openSelector'), closeSelector: id('closeSelector'), selectorScreen: id('selectorScreen'), searchFood: id('searchFood'), foodList: id('foodList'), selectorMealOptions: id('selectorMealOptions'), selectorMealGrams: id('selectorMealGrams'),
       grams: id('grams'), addFood: id('addFood'), diaryList: id('diaryList'), diaryCount: id('diaryCount'),
+      openMeals: id('openMeals'), mealsScreen: id('mealsScreen'), closeMeals: id('closeMeals'), mealsList: id('mealsList'), newMealBtn: id('newMealBtn'), mealBuilder: id('mealBuilder'), mealName: id('mealName'), addMealFood: id('addMealFood'), mealItems: id('mealItems'), mealTotals: id('mealTotals'), saveMeal: id('saveMeal'),
       toggleCustom: id('toggleCustom'), customForm: id('customForm'), cName: id('cName'), cP: id('cP'), cC: id('cC'), cF: id('cF'), cFV: id('cFV'), saveCustom: id('saveCustom'),
       exportCsv: id('exportCsv'), exportJson: id('exportJson'), copyAll: id('copyAll'), importBtn: id('importBtn'), importInput: id('importInput')
     };
@@ -417,9 +484,12 @@
     init();
 
     function init() {
+      if (!Array.isArray(state.meals)) state.meals = [];
       fillProfileInputs();
       bind();
       renderSelector();
+      renderMeals();
+      renderMealDraft();
       renderAll();
     }
 
@@ -428,12 +498,19 @@
       els.modeToggle.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
       els.prevDay.addEventListener('click', () => { dayOffset -= 1; renderAll(); });
       els.nextDay.addEventListener('click', () => { dayOffset += 1; renderAll(); });
+      els.openSettings.addEventListener('click', () => els.settingsScreen.classList.add('open'));
+      els.closeSettings.addEventListener('click', () => els.settingsScreen.classList.remove('open'));
       els.vitPlus.addEventListener('click', () => adjustVitamin(1));
       els.vitMinus.addEventListener('click', () => adjustVitamin(-1));
-      els.openSelector.addEventListener('click', () => els.selectorScreen.classList.add('open'));
+      els.openSelector.addEventListener('click', () => openSelector('diary'));
       els.closeSelector.addEventListener('click', () => els.selectorScreen.classList.remove('open'));
       els.searchFood.addEventListener('input', renderSelector);
       els.addFood.addEventListener('click', addFoodEntry);
+      els.openMeals.addEventListener('click', () => { renderMeals(); els.mealsScreen.classList.add('open'); });
+      els.closeMeals.addEventListener('click', () => els.mealsScreen.classList.remove('open'));
+      els.newMealBtn.addEventListener('click', startNewMeal);
+      els.addMealFood.addEventListener('click', () => openSelector('meal'));
+      els.saveMeal.addEventListener('click', saveMeal);
       els.toggleCustom.addEventListener('click', () => els.customForm.style.display = els.customForm.style.display === 'none' ? 'block' : 'none');
       els.saveCustom.addEventListener('click', createCustomFood);
       els.exportCsv.addEventListener('click', exportCsv);
@@ -565,6 +642,12 @@
       return [...mine, ...base];
     }
 
+    function openSelector(target) {
+      selectorTarget = target;
+      els.selectorMealOptions.style.display = target === 'meal' ? 'block' : 'none';
+      els.selectorScreen.classList.add('open');
+    }
+
     function renderSelector() {
       const q = (els.searchFood.value || '').trim().toLowerCase();
       const list = allFoods().filter(f => f.name.toLowerCase().includes(q));
@@ -587,8 +670,27 @@
     }
 
     function selectFood(id) {
-      selectedFood = allFoods().find(f => f.id === id) || null;
-      els.selectedFood.textContent = selectedFood ? `${selectedFood.name} · P ${selectedFood.p} C ${selectedFood.c} G ${selectedFood.f} (100g)` : 'Nessun alimento selezionato';
+      const food = allFoods().find(f => f.id === id) || null;
+      if (selectorTarget === 'meal') {
+        if (!food) return;
+        const grams = n(els.selectorMealGrams.value, 0);
+        if (grams <= 0) return alert('Inserisci i grammi da aggiungere al pasto.');
+        const factor = grams / 100;
+        mealDraft.items.push({
+          foodId: food.id,
+          name: food.name,
+          grams,
+          p: round1(food.p * factor),
+          c: round1(food.c * factor),
+          f: round1(food.f * factor),
+          kcal: round1(kcal100(food) * factor),
+          isFV: !!food.isFV
+        });
+        renderMealDraft();
+      } else {
+        selectedFood = food;
+        els.selectedFood.textContent = selectedFood ? `${selectedFood.name} · P ${selectedFood.p} C ${selectedFood.c} G ${selectedFood.f} (100g)` : 'Nessun alimento selezionato';
+      }
       els.selectorScreen.classList.remove('open');
     }
 
@@ -611,6 +713,76 @@
       ensureDaily().entries.push(entry);
       persist();
       renderAll();
+    }
+
+    function startNewMeal() {
+      mealDraft = { name: '', items: [] };
+      els.mealName.value = '';
+      els.mealBuilder.style.display = 'block';
+      renderMealDraft();
+    }
+
+    function renderMealDraft() {
+      const items = mealDraft.items || [];
+      if (!items.length) {
+        els.mealItems.innerHTML = '<div class="muted">Nessun alimento nel pasto in costruzione.</div>';
+      } else {
+        els.mealItems.innerHTML = items.map((item, idx) => `<div class="meal-item"><div class="row between"><strong>${escHtml(item.name)}</strong><button class="danger-btn" data-meal-rm="${idx}" style="padding:5px 9px;">×</button></div><div class="muted" style="margin-top:4px;">${item.grams} g · P ${item.p} · C ${item.c} · G ${item.f} · ${Math.round(item.kcal)} kcal ${item.isFV ? '· FV' : ''}</div></div>`).join('');
+        els.mealItems.querySelectorAll('[data-meal-rm]').forEach(btn => btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.mealRm, 10);
+          if (Number.isInteger(idx) && idx >= 0) mealDraft.items.splice(idx, 1);
+          renderMealDraft();
+        }));
+      }
+      const totals = totalsForEntries(items);
+      els.mealTotals.textContent = `P ${round1(totals.p)} · C ${round1(totals.c)} · G ${round1(totals.f)} · ${Math.round(totals.kcal)} kcal`;
+    }
+
+    function saveMeal() {
+      const name = (els.mealName.value || '').trim();
+      if (!name) return alert('Inserisci un nome per il pasto.');
+      if (!mealDraft.items.length) return alert('Aggiungi almeno un alimento al pasto.');
+      state.meals.unshift({ id: newId(), name, items: mealDraft.items.map(x => ({ ...x })) });
+      mealDraft = { name: '', items: [] };
+      els.mealName.value = '';
+      els.mealBuilder.style.display = 'none';
+      persist();
+      renderMeals();
+      renderMealDraft();
+    }
+
+    function renderMeals() {
+      const meals = Array.isArray(state.meals) ? state.meals : [];
+      if (!meals.length) {
+        els.mealsList.innerHTML = '<div class="muted">Nessun pasto ricorrente salvato.</div>';
+        return;
+      }
+      els.mealsList.innerHTML = meals.map(meal => {
+        const totals = totalsForEntries(meal.items || []);
+        const itemsCount = (meal.items || []).length;
+        return `<div class="meal-row" data-meal-add="${encodeURIComponent(meal.id)}"><div><strong>${escHtml(meal.name)}</strong><br><small>P ${round1(totals.p)} · C ${round1(totals.c)} · G ${round1(totals.f)} · ${Math.round(totals.kcal)} kcal · ${itemsCount} ${itemsCount === 1 ? 'alimento' : 'alimenti'}</small></div><button class="danger-btn" data-meal-del="${encodeURIComponent(meal.id)}" style="padding:5px 9px;">×</button></div>`;
+      }).join('');
+      els.mealsList.querySelectorAll('[data-meal-add]').forEach(row => row.addEventListener('click', () => addMealToDay(decodeURIComponent(row.dataset.mealAdd))));
+      els.mealsList.querySelectorAll('[data-meal-del]').forEach(btn => btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        deleteMeal(decodeURIComponent(btn.dataset.mealDel));
+      }));
+    }
+
+    function addMealToDay(id) {
+      const meal = (state.meals || []).find(x => x.id === id);
+      if (!meal) return;
+      const daily = ensureDaily();
+      (meal.items || []).forEach(item => daily.entries.push({ ...item, id: newId() }));
+      persist();
+      renderAll();
+      els.mealsScreen.classList.remove('open');
+    }
+
+    function deleteMeal(id) {
+      state.meals = (state.meals || []).filter(meal => meal.id !== id);
+      persist();
+      renderMeals();
     }
 
     function renderDiary(entries) {
@@ -643,12 +815,14 @@
     }
 
     function deleteCustom(id) {
-      const inUse = Object.values(state.daily).some(d => (d.entries || []).some(e => e.foodId === id));
-      if (inUse && !confirm('Alimento già usato in diario. Eliminarlo dalla lista personalizzata? I pasti già inseriti resteranno.')) return;
+      const inDiary = Object.values(state.daily).some(d => (d.entries || []).some(e => e.foodId === id));
+      const inMeals = (state.meals || []).some(meal => (meal.items || []).some(item => item.foodId === id));
+      if ((inDiary || inMeals) && !confirm('Alimento già usato in diario o in pasti ricorrenti. Eliminarlo dalla lista personalizzata? Le voci già salvate resteranno.')) return;
       state.customFoods = state.customFoods.filter(f => f.id !== id);
       if (selectedFood && selectedFood.id === id) selectedFood = null;
       if (!selectedFood) els.selectedFood.textContent = 'Nessun alimento selezionato';
       persist();
+      renderMeals();
       renderSelector();
     }
 
@@ -672,11 +846,13 @@
         state = {
           profile: { ...defaults.profile, ...(incoming.profile || {}) },
           daily: incoming.daily && typeof incoming.daily === 'object' ? incoming.daily : {},
-          customFoods: Array.isArray(incoming.customFoods) ? incoming.customFoods : []
+          customFoods: Array.isArray(incoming.customFoods) ? incoming.customFoods : [],
+          meals: Array.isArray(incoming.meals) ? incoming.meals : []
         };
         persist();
         fillProfileInputs();
         renderSelector();
+        renderMeals();
         renderAll();
         alert('Backup importato con successo.');
       } catch {
@@ -717,7 +893,8 @@
         return {
           profile: { ...defaults.profile, ...(raw.profile || {}) },
           daily: raw.daily && typeof raw.daily === 'object' ? raw.daily : {},
-          customFoods: Array.isArray(raw.customFoods) ? raw.customFoods : []
+          customFoods: Array.isArray(raw.customFoods) ? raw.customFoods : [],
+          meals: Array.isArray(raw.meals) ? raw.meals : []
         };
       } catch { return cloneDefaults(); }
     }
