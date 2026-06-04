@@ -92,6 +92,11 @@
     .grid-2 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
     .grid-4 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
     details summary { cursor: pointer; color: #bfd4ff; margin: 8px 0; }
+    @property --pct {
+      syntax: '<number>';
+      inherits: false;
+      initial-value: 0;
+    }
     .ring-wrap { display: flex; align-items: center; gap: 12px; }
     .ring {
       --pct: 0;
@@ -104,6 +109,7 @@
       display: grid;
       place-items: center;
       flex: 0 0 auto;
+      transition: --pct .5s ease;
     }
     .ring::before {
       content: "";
@@ -137,7 +143,7 @@
       overflow: hidden;
       margin: 6px 0;
     }
-    .bar > div { height: 100%; border-radius: inherit; }
+    .bar > div { height: 100%; border-radius: inherit; animation: barExpand .5s ease both; }
     .vit-box {
       background: #0d121c;
       border: 1px solid #27324a;
@@ -270,6 +276,51 @@
       .span-2 { grid-column: 1 / -1; }
       .grid-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
     }
+
+    /* z-index fix: selector always above meals screen */
+    #selectorScreen.open { z-index: 120; }
+
+    /* button active feedback */
+    .accent-btn:active, .soft-btn:active, .danger-btn:active,
+    .vit-counter button:active, .icon-btn:active, .date-nav button:active,
+    .toggle button:active { transform: scale(.97); transition: transform .1s; }
+
+    /* bar expand animation */
+    @keyframes barExpand {
+      from { max-width: 0; }
+      to { max-width: 100%; }
+    }
+
+    /* ring pulse on calorie goal reached */
+    @keyframes ringPulse {
+      0%, 100% { box-shadow: none; }
+      40% { box-shadow: 0 0 0 8px rgba(255,90,95,.25); }
+    }
+    .ring.goal-met { animation: ringPulse .7s ease; }
+
+    /* toast notification */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: #1a2840;
+      color: #cde5ff;
+      border: 1px solid #2e4570;
+      border-radius: 12px;
+      padding: 10px 22px;
+      font-size: .9rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s, transform .3s;
+      z-index: 200;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* coaching line */
+    #coachLine { margin-top: 8px; font-size: .85rem; color: var(--muted); min-height: 1.3em; }
   </style>
 </head>
 <body>
@@ -304,6 +355,7 @@
           <h2>Calorie giornata</h2>
           <div class="mono" id="kcalMain">0 / 0 kcal</div>
           <div class="muted" id="kcalLeft">Mancano 0 kcal</div>
+          <div id="coachLine"></div>
         </div>
       </div>
       <div id="macroWrap"></div>
@@ -472,13 +524,14 @@
       bmr: id('bmr'), maint: id('maint'), goalOn: id('goalOn'), goalOff: id('goalOff'),
       modeToggle: id('modeToggle'), dayLabel: id('dayLabel'), isoLabel: id('isoLabel'), prevDay: id('prevDay'), nextDay: id('nextDay'),
       openSettings: id('openSettings'), settingsScreen: id('settingsScreen'), closeSettings: id('closeSettings'),
-      kcalRing: id('kcalRing'), kcalPct: id('kcalPct'), kcalMain: id('kcalMain'), kcalLeft: id('kcalLeft'), macroWrap: id('macroWrap'),
+      kcalRing: id('kcalRing'), kcalPct: id('kcalPct'), kcalMain: id('kcalMain'), kcalLeft: id('kcalLeft'), macroWrap: id('macroWrap'), coachLine: id('coachLine'),
       vitMinus: id('vitMinus'), vitPlus: id('vitPlus'), vitVal: id('vitVal'),
       selectedFood: id('selectedFood'), openSelector: id('openSelector'), closeSelector: id('closeSelector'), selectorScreen: id('selectorScreen'), searchFood: id('searchFood'), foodList: id('foodList'), selectorMealOptions: id('selectorMealOptions'), selectorMealGrams: id('selectorMealGrams'),
       grams: id('grams'), addFood: id('addFood'), diaryList: id('diaryList'), diaryCount: id('diaryCount'),
       openMeals: id('openMeals'), mealsScreen: id('mealsScreen'), closeMeals: id('closeMeals'), mealsList: id('mealsList'), newMealBtn: id('newMealBtn'), mealBuilder: id('mealBuilder'), mealName: id('mealName'), addMealFood: id('addMealFood'), mealItems: id('mealItems'), mealTotals: id('mealTotals'), saveMeal: id('saveMeal'),
       toggleCustom: id('toggleCustom'), customForm: id('customForm'), cName: id('cName'), cP: id('cP'), cC: id('cC'), cF: id('cF'), cFV: id('cFV'), saveCustom: id('saveCustom'),
-      exportCsv: id('exportCsv'), exportJson: id('exportJson'), copyAll: id('copyAll'), importBtn: id('importBtn'), importInput: id('importInput')
+      exportCsv: id('exportCsv'), exportJson: id('exportJson'), copyAll: id('copyAll'), importBtn: id('importBtn'), importInput: id('importInput'),
+      toast: id('toast')
     };
 
     init();
@@ -552,6 +605,21 @@
       return { bmr, maint, kcalOn, kcalOff, protein, fat, carbOn: Math.max(0, carbOn), carbOff: Math.max(0, carbOff) };
     }
 
+    function coachMsg(totals, g, mode) {
+      const carbGoal = mode === 'ON' ? g.carbOn : g.carbOff;
+      const remP = Math.max(0, g.protein - totals.p);
+      const remC = Math.max(0, carbGoal - totals.c);
+      const remF = Math.max(0, g.fat - totals.f);
+      if (remP <= 2 && remC <= 2 && remF <= 2) return '🎯 Tutti gli obiettivi raggiunti — ottimo lavoro!';
+      const pPct = g.protein > 0 ? remP / g.protein : 0;
+      const cPct = carbGoal > 0 ? remC / carbGoal : 0;
+      const fPct = g.fat > 0 ? remF / g.fat : 0;
+      if (pPct >= cPct && pPct >= fPct && remP > 2) return `💪 Ti mancano ${Math.round(remP)} g di proteine — prova 120 g di petto di pollo o 150 g di yogurt greco.`;
+      if (cPct >= fPct && remC > 2) return `⚡ Ti mancano ${Math.round(remC)} g di carboidrati — prova 80 g di pasta o 100 g di riso basmati.`;
+      if (remF > 2) return `🥑 Ti mancano ${Math.round(remF)} g di grassi — prova 20 g di olio EVO o 30 g di mandorle.`;
+      return '🎯 Sei vicino a tutti gli obiettivi!';
+    }
+
     function getDate(offset = dayOffset) {
       const d = new Date();
       d.setHours(0,0,0,0);
@@ -596,10 +664,18 @@
 
       els.kcalRing.style.setProperty('--pct', Math.min(1, kcalPct / 100));
       els.kcalRing.style.setProperty('--accent', daily.mode === 'ON' ? 'var(--on)' : 'var(--off)');
-      els.kcalPct.textContent = `${Math.round(kcalPct)}%`;
+      els.kcalRing.classList.remove('goal-met');
+      if (kcalPct >= 100) {
+        void els.kcalRing.offsetWidth; /* force reflow so CSS animation restarts on repeated goal */
+        els.kcalRing.classList.add('goal-met');
+        els.kcalPct.textContent = '✓';
+      } else {
+        els.kcalPct.textContent = `${Math.round(kcalPct)}%`;
+      }
       els.kcalMain.textContent = `${Math.round(totals.kcal)} / ${Math.round(kcalGoal)} kcal`;
       const kcalRemain = Math.max(0, Math.round(kcalGoal - totals.kcal));
       els.kcalLeft.textContent = kcalRemain === 0 ? 'Obiettivo calorie raggiunto' : `Mancano ${kcalRemain} kcal`;
+      els.coachLine.textContent = coachMsg(totals, g, daily.mode);
 
       els.macroWrap.innerHTML = [
         macroCard('Proteine', totals.p, g.protein, pPct, 'var(--protein)'),
@@ -699,6 +775,7 @@
       const grams = n(els.grams.value, 0);
       if (grams <= 0) return alert('Inserisci i grammi.');
       const factor = grams / 100;
+      const foodName = selectedFood.name;
       const entry = {
         id: newId(),
         foodId: selectedFood.id,
@@ -713,6 +790,8 @@
       ensureDaily().entries.push(entry);
       persist();
       renderAll();
+      showToast(`✓ Aggiunto: ${foodName}`);
+      navigator.vibrate?.(15);
     }
 
     function startNewMeal() {
@@ -749,6 +828,7 @@
       persist();
       renderMeals();
       renderMealDraft();
+      showToast(`✓ Pasto salvato: ${name}`);
     }
 
     function renderMeals() {
@@ -777,6 +857,8 @@
       persist();
       renderAll();
       els.mealsScreen.classList.remove('open');
+      showToast(`✓ Pasto aggiunto: ${meal.name}`);
+      navigator.vibrate?.(15);
     }
 
     function deleteMeal(id) {
@@ -812,6 +894,7 @@
       els.cFV.checked = false;
       persist();
       renderSelector();
+      showToast(`✓ Alimento creato: ${newFood.name}`);
     }
 
     function deleteCustom(id) {
@@ -873,6 +956,13 @@
     function safeCsv(v) { const s = String(v ?? '').replaceAll('"', '""'); return `"${s}"`; }
     function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
     function newId() { return (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}_${++idCounter}`; }
+    let _toastTimer;
+    function showToast(msg) {
+      els.toast.textContent = msg;
+      els.toast.classList.add('show');
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2200);
+    }
 
     function downloadFile(name, content, type) {
       const blob = new Blob([content], { type });
@@ -902,5 +992,6 @@
     function cloneDefaults() { return globalThis.structuredClone ? structuredClone(defaults) : JSON.parse(JSON.stringify(defaults)); }
     function persist() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
   </script>
+  <div id="toast"></div>
 </body>
 </html>
