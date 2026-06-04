@@ -186,6 +186,9 @@
       border-radius: 12px;
       padding: 10px;
       margin-bottom: 8px;
+      transition: opacity .24s ease, transform .24s ease, max-height .24s ease, margin .24s ease, padding .24s ease;
+      max-height: 170px;
+      overflow: hidden;
     }
     .pill {
       font-size: .72rem;
@@ -193,6 +196,48 @@
       border-radius: 999px;
       border: 1px solid #394f7b;
       color: #c4d7ff;
+    }
+    .diary-group { margin-bottom: 12px; }
+    .diary-group-header {
+      margin: 2px 0 8px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid #2a3751;
+      background: #111827;
+      color: #d7e7ff;
+      font-size: .92rem;
+      font-weight: 700;
+    }
+    .diary-cat-chip {
+      width: auto;
+      min-width: 130px;
+      max-width: 190px;
+      font-size: .77rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #3a5588;
+      background: #15233a;
+      color: #d3e4ff;
+    }
+    .diary-item.new-entry {
+      animation: diaryEntryIn .35s ease both, diaryEntryGlow 1.1s ease;
+    }
+    .diary-item.removing {
+      opacity: 0;
+      transform: translateX(14px);
+      max-height: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-width: 0;
+    }
+    @keyframes diaryEntryIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes diaryEntryGlow {
+      0% { box-shadow: 0 0 0 0 rgba(84,167,255,.45); }
+      100% { box-shadow: 0 0 0 0 rgba(84,167,255,0); }
     }
     .fullscreen {
       position: fixed;
@@ -380,8 +425,12 @@
           <label>Grammi</label>
           <input id="grams" type="number" min="1" step="1" value="100" />
         </div>
-        <div style="display:flex;align-items:end;"><button class="accent-btn" id="addFood" style="width:100%;">+ Aggiungi</button></div>
+        <div>
+          <label>Categoria</label>
+          <select id="entryCategory"></select>
+        </div>
       </div>
+      <button class="accent-btn" id="addFood" style="width:100%; margin-top:8px;">+ Aggiungi</button>
     </div>
 
     <div class="card span-2">
@@ -518,6 +567,15 @@
     let selectorTarget = 'diary';
     let mealDraft = { name: '', items: [] };
     let idCounter = 0;
+    let lastAddedEntryId = null;
+    const ENTRY_CATEGORIES = [
+      { value: 'colazione', label: 'Colazione' },
+      { value: 'spuntino_mattina', label: 'Spuntino mattina' },
+      { value: 'pranzo', label: 'Pranzo' },
+      { value: 'spuntino_sera', label: 'Spuntino sera' },
+      { value: 'cena', label: 'Cena' },
+      { value: '', label: 'Pasto generico' }
+    ];
 
     const els = {
       peso: id('peso'), altezza: id('altezza'), sesso: id('sesso'), eta: id('eta'), attivita: id('attivita'), obiettivo: id('obiettivo'),
@@ -527,7 +585,7 @@
       kcalRing: id('kcalRing'), kcalPct: id('kcalPct'), kcalMain: id('kcalMain'), kcalLeft: id('kcalLeft'), macroWrap: id('macroWrap'), coachLine: id('coachLine'),
       vitMinus: id('vitMinus'), vitPlus: id('vitPlus'), vitVal: id('vitVal'),
       selectedFood: id('selectedFood'), openSelector: id('openSelector'), closeSelector: id('closeSelector'), selectorScreen: id('selectorScreen'), searchFood: id('searchFood'), foodList: id('foodList'), selectorMealOptions: id('selectorMealOptions'), selectorMealGrams: id('selectorMealGrams'),
-      grams: id('grams'), addFood: id('addFood'), diaryList: id('diaryList'), diaryCount: id('diaryCount'),
+      grams: id('grams'), entryCategory: id('entryCategory'), addFood: id('addFood'), diaryList: id('diaryList'), diaryCount: id('diaryCount'),
       openMeals: id('openMeals'), mealsScreen: id('mealsScreen'), closeMeals: id('closeMeals'), mealsList: id('mealsList'), newMealBtn: id('newMealBtn'), mealBuilder: id('mealBuilder'), mealName: id('mealName'), addMealFood: id('addMealFood'), mealItems: id('mealItems'), mealTotals: id('mealTotals'), saveMeal: id('saveMeal'),
       toggleCustom: id('toggleCustom'), customForm: id('customForm'), cName: id('cName'), cP: id('cP'), cC: id('cC'), cF: id('cF'), cFV: id('cFV'), saveCustom: id('saveCustom'),
       exportCsv: id('exportCsv'), exportJson: id('exportJson'), copyAll: id('copyAll'), importBtn: id('importBtn'), importInput: id('importInput'),
@@ -539,6 +597,7 @@
     function init() {
       if (!Array.isArray(state.meals)) state.meals = [];
       fillProfileInputs();
+      renderCategorySelects();
       bind();
       renderSelector();
       renderMeals();
@@ -718,6 +777,11 @@
       return [...mine, ...base];
     }
 
+    function renderCategorySelects() {
+      els.entryCategory.innerHTML = ENTRY_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
+      els.entryCategory.value = '';
+    }
+
     function openSelector(target) {
       selectorTarget = target;
       els.selectorMealOptions.style.display = target === 'meal' ? 'block' : 'none';
@@ -787,7 +851,10 @@
         kcal: round1(kcal100(selectedFood) * factor),
         isFV: !!selectedFood.isFV
       };
+      const category = normalizeCategory(els.entryCategory.value);
+      if (category) entry.category = category;
       ensureDaily().entries.push(entry);
+      lastAddedEntryId = entry.id;
       persist();
       renderAll();
       showToast(`✓ Aggiunto: ${foodName}`);
@@ -853,7 +920,11 @@
       const meal = (state.meals || []).find(x => x.id === id);
       if (!meal) return;
       const daily = ensureDaily();
-      (meal.items || []).forEach(item => daily.entries.push({ ...item, id: newId() }));
+      (meal.items || []).forEach(item => {
+        const entry = { ...item, id: newId() };
+        delete entry.category;
+        daily.entries.push(entry);
+      });
       persist();
       renderAll();
       els.mealsScreen.classList.remove('open');
@@ -873,15 +944,61 @@
         els.diaryList.innerHTML = '<div class="muted">Ancora nessun alimento aggiunto per questa data.</div>';
         return;
       }
-      els.diaryList.innerHTML = entries.map(e => `<div class="diary-item"><div class="row between"><strong>${escHtml(e.name)}</strong><button class="danger-btn" data-rm="${encodeURIComponent(e.id)}" style="padding:6px 10px;">Elimina</button></div><div class="muted" style="margin-top:5px;">${e.grams} g · P ${e.p} · C ${e.c} · G ${e.f} · ${Math.round(e.kcal)} kcal ${e.isFV ? '· porzione FV' : ''}</div></div>`).join('');
-      els.diaryList.querySelectorAll('[data-rm]').forEach(btn => btn.addEventListener('click', () => removeEntry(decodeURIComponent(btn.dataset.rm))));
+      const grouped = ENTRY_CATEGORIES.map(cat => {
+        const key = cat.value || '';
+        const items = entries.filter(e => normalizeCategory(e.category) === key);
+        return { key, label: cat.label, items, totals: totalsForEntries(items) };
+      }).filter(group => group.items.length);
+      els.diaryList.innerHTML = grouped.map(group => `
+        <div class="diary-group">
+          <div class="diary-group-header row between"><span>${group.label}</span><span class="mono">${Math.round(group.totals.kcal)} kcal</span></div>
+          ${group.items.map(e => `
+            <div class="diary-item ${e.id === lastAddedEntryId ? 'new-entry' : ''}" data-entry-id="${encodeURIComponent(e.id)}">
+              <div class="row between">
+                <strong>${escHtml(e.name)}</strong>
+                <button class="danger-btn" data-rm="${encodeURIComponent(e.id)}" style="padding:6px 10px;">Elimina</button>
+              </div>
+              <div class="row between" style="margin-top:6px; gap:8px; flex-wrap:wrap;">
+                <div class="muted">${e.grams} g · P ${e.p} · C ${e.c} · G ${e.f} · ${Math.round(e.kcal)} kcal ${e.isFV ? '· porzione FV' : ''}</div>
+                <select class="diary-cat-chip" data-cat="${encodeURIComponent(e.id)}">${ENTRY_CATEGORIES.map(c => `<option value="${c.value}" ${normalizeCategory(e.category) === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}</select>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+      els.diaryList.querySelectorAll('[data-rm]').forEach(btn => btn.addEventListener('click', () => removeEntry(decodeURIComponent(btn.dataset.rm), btn.closest('.diary-item'))));
+      els.diaryList.querySelectorAll('[data-cat]').forEach(sel => sel.addEventListener('change', () => changeEntryCategory(decodeURIComponent(sel.dataset.cat), sel.value)));
+      if (lastAddedEntryId) setTimeout(() => { lastAddedEntryId = null; }, 600);
     }
 
-    function removeEntry(id) {
+    function changeEntryCategory(id, categoryValue) {
       const daily = ensureDaily();
-      daily.entries = daily.entries.filter(e => e.id !== id);
+      const entry = daily.entries.find(e => e.id === id);
+      if (!entry) return;
+      const category = normalizeCategory(categoryValue);
+      if (category) entry.category = category;
+      else delete entry.category;
       persist();
       renderAll();
+    }
+
+    function removeEntry(id, node) {
+      const daily = ensureDaily();
+      const entry = daily.entries.find(e => e.id === id);
+      if (!entry) return;
+      if (!confirm(`Eliminare "${entry.name}" dal diario?`)) return;
+      if (node) node.classList.add('removing');
+      setTimeout(() => {
+        const nextDaily = ensureDaily();
+        nextDaily.entries = nextDaily.entries.filter(e => e.id !== id);
+        persist();
+        renderAll();
+        showToast(`✓ Eliminato: ${entry.name}`);
+      }, node ? 240 : 0);
+    }
+
+    function normalizeCategory(value) {
+      return ENTRY_CATEGORIES.some(c => c.value === value) ? value : '';
     }
 
     function createCustomFood() {
